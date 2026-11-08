@@ -135,33 +135,29 @@ py scripts/run_pipeline.py --source csv --data data/raw/us_treasury_yields_daily
 ```
 
 
-## 5. Results (default synthetic run)
+## 5. Results (real US Treasury yields)
 
-### Cross-section (2024-06-21, real US Treasury yields)
+### Cross-section (2024-06-21)
 
-```
-| Model            | RMSE (discount) | MAE (discount) | Smoothness |
-| ---------------- | --------------- | -------------- | ---------- |
-| Nelson-Siegel    | 0.00310         | 0.00191        | 0.00251    |
-| Kernel RF        | **0.00007**     | **0.00005**    | 0.00205    |
-```
+| Model         | RMSE (discount) | MAE (discount) | Smoothness |
+|---------------|-----------------|----------------|------------|
+| Nelson-Siegel | 0.003104        | 0.001905       | 0.002514   |
+| Kernel RF     | **0.000071**    | **0.000049**   | 0.002053   |
 
-On a clean 11-point constant-maturity cross-section the flexible random-feature estimator essentially interpolates the observed discounts; Nelson-Siegel retains the classic parametric residual.
+On a single clean 11-point constant-maturity cross-section the random-feature estimator essentially interpolates the observed discounts (near-zero residual). Nelson–Siegel leaves a residual of roughly 0.3 bp in discount space, which is the classic parametric trade-off between flexibility and structure.
 
-### Day-by-day backtest (2018–2024, step = 10 days)
+### Expanding-window backtest (2018–2024)
 
-```
-| Model            | Mean RMSE       | Mean MAE       |
-| ---------------- | --------------- | -------------- |
-| Nelson-Siegel    | 0.00536         | 0.00325        |
-| Kernel RF        | **0.00008**     | **0.00005**    |
-```
+| Model         | Mean RMSE | Mean MAE |
+|---------------|-----------|----------|
+| Nelson-Siegel | **0.05674** | **0.04353** |
+| Kernel RF     | 0.05713   | 0.04387  |
 
-Full tables: [`reports/metrics/backtest_summary.csv`](reports/metrics/backtest_summary.csv) · [`reports/metrics/cross_section_metrics.csv`](reports/metrics/cross_section_metrics.csv)
+Averaged over the full expanding-window evaluation the two models are essentially tied. The extra flexibility of the kernel estimator is most valuable for in-sample fit; once models are re-estimated day by day, average out-of-sample pricing error becomes comparable.
+
+Full tables: [`reports/metrics/backtest_summary.csv`](reports/metrics/backtest_summary.csv) · [`reports/metrics/cross_section_metrics.csv`](reports/metrics/cross_section_metrics.csv) · [`reports/metrics/backtest_results.csv`](reports/metrics/backtest_results.csv)
 
 ### Figures
-
-After running the pipeline the following plots appear under `reports/figures/`:
 
 **Discount curve (latest cross-section)**
 
@@ -241,11 +237,40 @@ pytest tests/ -q
 
 ## 8. Analysis Highlights
 
-- The random-feature kernel estimator achieves modestly lower in-sample pricing error than Nelson-Siegel on data containing outliers, at the cost of a less smooth curve.
-- Expanding-window results confirm that the flexible ML model remains competitive when parameters are re-estimated over time.
-- Because the synthetic design injects known outliers, residual analysis can be used to illustrate the value of robust losses (planned extension).
-- The same pipeline structure is ready for real CRSP-style or TreasuryDirect quote files; only the data loader needs to be pointed at the new CSV.
+### What the numbers say
 
+1. **In-sample dominance of the kernel model**  
+   On the final cross-section (2024-06-21) Kernel RF reduces discount RMSE by roughly two orders of magnitude relative to Nelson–Siegel (0.000071 vs 0.003104). With only 11 constant-maturity points the flexible estimator can essentially interpolate; the parametric form cannot.
+
+2. **Out-of-sample parity**  
+   In the expanding-window backtest (step ≈ 20 trading days, 2018–2024) mean RMSE is virtually identical:  
+   Nelson–Siegel 0.0567 · Kernel RF 0.0571.  
+   The ranking therefore reverses once models are forced to generalise across successive test dates.
+
+3. **Time variation of pricing error**  
+   Looking at the day-by-day series (`backtest_results.csv`):
+
+   - **2018 – early 2019**: both models stay below ~0.02 RMSE; the market is relatively calm.
+   - **Mid-2019 – early 2020**: errors rise steadily (flattening / inversion of the curve).
+   - **March–April 2020 (COVID shock)**: RMSE jumps above 0.11 for both models — the largest single episode in the sample.
+   - **2021 recovery**: errors fall back toward 0.02–0.03.
+   - **2022–2023 rate-hike cycle**: a second prolonged elevation (RMSE often 0.07–0.13), reflecting rapid level and slope changes that neither a fixed parametric shape nor a pure kernel fit anticipates perfectly when trained only on past data.
+   - **2024**: errors remain elevated but stable around 0.09–0.11.
+
+4. **Model ranking is regime-dependent**  
+   In calm periods Kernel RF is often slightly better.  
+   In the sharp 2022–2023 hiking cycle Nelson–Siegel occasionally records lower RMSE, consistent with the value of a low-dimensional, economically constrained shape when the curve is moving violently.
+
+5. **Smoothness**  
+   On the final cross-section Kernel RF is also slightly smoother (0.00205 vs 0.00251), so the near-perfect fit is not obtained by obvious oscillation.
+
+### Interpretation for research
+
+- A flexible ML estimator can eliminate almost all in-sample pricing error on a sparse constant-maturity grid, but that advantage largely disappears under a realistic expanding-window protocol.
+- Parametric structure (Nelson–Siegel) remains competitive — and sometimes preferable — precisely when the yield curve is subject to large, rapid shifts.
+- Consequently the interesting research question is not “which model wins on average” but **when** and **why** each class of estimator fails, and how robustness (e.g. Huber loss, monotonicity constraints, or economically motivated regularisers) can stabilise the flexible model in stress regimes.
+
+These observations motivate the next items on the roadmap: robust losses, shape constraints, and an economic evaluation (hedging error / duration stability) rather than pure statistical pricing error.بعد از جایگزینی:
 ---
 
 ## 9. Roadmap
