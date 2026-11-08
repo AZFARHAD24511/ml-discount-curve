@@ -34,7 +34,7 @@ with explicit attention to **robustness** (outliers) and clean evaluation protoc
 | ------------------------------ | ----------------------------------------------------------------------- | ------------------------- |
 | Synthetic Treasury panel       | Multi-day cross-sections around a slowly varying Nelson-Siegel curve, with realistic noise and controlled outliers | 80 business days × ~48 bonds |
 | User-supplied CSV (optional)   | Any panel with columns `date, maturity, observed_discount` (or `observed_yield`) | User-defined              |
-
+Download the raw file from Kaggle / U.S. Treasury and place it at `data/raw/us_treasury_yields_daily.csv`.
 > **Note on real market data**  
 > The default pipeline uses a high-quality synthetic panel so that the repository is fully self-contained and reproducible without proprietary data licences. The same code accepts real cleaned Treasury quote files (CRSP, TreasuryDirect, or vendor data) via `--source csv --data path/to/file.csv`.
 
