@@ -270,7 +270,7 @@ pytest tests/ -q
 - Parametric structure (Nelson–Siegel) remains competitive — and sometimes preferable — precisely when the yield curve is subject to large, rapid shifts.
 - Consequently the interesting research question is not “which model wins on average” but **when** and **why** each class of estimator fails, and how robustness (e.g. Huber loss, monotonicity constraints, or economically motivated regularisers) can stabilise the flexible model in stress regimes.
 
-These observations motivate the next items on the roadmap: robust losses, shape constraints, and an economic evaluation (hedging error / duration stability) rather than pure statistical pricing error.بعد از جایگزینی:
+These observations motivate the next items on the roadmap: robust losses, shape constraints, and an economic evaluation (hedging error / duration stability) rather than pure statistical pricing error.
 ---
 
 ## 9. Roadmap
