@@ -1,0 +1,26 @@
+{
+  "cross_section": {
+    "nelson_siegel": {
+      "rmse_discount": 0.003104058137671955,
+      "mae_discount": 0.0019046338960741988,
+      "smoothness": 0.0025143155000099727
+    },
+    "kernel_rf": {
+      "rmse_discount": 7.096603269804554e-05,
+      "mae_discount": 4.912081187201252e-05,
+      "smoothness": 0.0020525717290298564
+    }
+  },
+  "backtest_mean": {
+    "rmse": {
+      "kernel_rf": 0.05712590850060792,
+      "nelson_siegel": 0.05673943857844856
+    },
+    "mae": {
+      "kernel_rf": 0.043865207738322795,
+      "nelson_siegel": 0.043530907500401665
+    }
+  },
+  "n_dates": 1619,
+  "cross_section_date": "2024-06-21"
+}
