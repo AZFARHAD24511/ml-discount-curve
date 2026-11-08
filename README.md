@@ -59,24 +59,81 @@ Because the core task is static curve stripping (one cross-section at a time) or
 
 All **primary results** reported in this README are produced by `scripts/run_pipeline.py` with the default synthetic configuration.
 
+## 4. Method (mathematical overview)
+
+### What the algorithm does
+
+We observe a set of constant-maturity Treasury yields on a given day.  
+From each yield $y(\tau)$ we recover the corresponding **discount factor**
+
+
+$$
+d(\tau) = \left(1 + \frac{y(\tau)}{2}\right)^{-2\tau}
+$$
+
+
+(assuming semi-annual compounding). The goal is to reconstruct a smooth function $d(\tau)$ (or equivalently the zero curve) that prices the observed instruments well and can be evaluated at any maturity.
+
+Two estimators are compared.
+
 ---
 
-## 4. Method
+### 4.1 Nelson–Siegel (parametric baseline)
 
-1. **Data preparation**
-   - Generate (or load) a panel of (date, maturity, observed discount/yield)
-   - Extract single cross-sections or pool history for expanding-window tests
+The Nelson–Siegel model parametrises the instantaneous forward curve as
 
-2. **Models**
-   - `NelsonSiegel` — standard parametric form fitted by non-linear least squares
-   - `KernelDiscountCurve` — random Fourier feature map + Ridge regression on the discount function
+$$
+f(\tau) = \beta_0 + \beta_1 e^{-\lambda\tau} + \beta_2 \lambda\tau e^{-\lambda\tau}.
+$$
 
-3. **Evaluation**
-   - Cross-section pricing error (RMSE / MAE on discount factors)
-   - Curve smoothness (discrete integrated squared second derivative)
-   - Expanding-window backtest: fit on all previous days, evaluate on the next day
+Integrating gives the zero yield
+
+$$
+y(\tau) = \beta_0 + \beta_1\left(\frac{1-e^{-\lambda\tau}}{\lambda\tau}\right) + \beta_2\left(\frac{1-e^{-\lambda\tau}}{\lambda\tau} - e^{-\lambda\tau}\right).
+$$
+
+The four parameters $(\beta_0,\beta_1,\beta_2,\lambda)$ are fitted by non-linear least squares to the observed yields (or discounts).  
+The model is parsimonious and produces globally smooth, economically interpretable curves, but it can be too rigid when the market exhibits complex shapes.
 
 ---
+
+### 4.2 Kernel / Random Fourier Features estimator (ML approach)
+
+We treat discount-curve estimation as a non-parametric regression problem:
+
+$$
+d(\tau) \approx \sum_{j=1}^{m} w_j\,\phi_j(\tau),
+$$
+
+where the feature map $\phi$ is an explicit random Fourier approximation of an RBF kernel (Rahimi & Recht).  
+Concretely, we draw frequencies $\omega_j \sim \mathcal{N}(0,\ell^{-2})$ and phases $b_j \sim \mathrm{Unif}[0,2\pi]$ and set
+
+$$
+\phi_j(\tau) = \sqrt{\frac{2}{m}}\,\cos(\omega_j\tau + b_j).
+$$
+
+The weights $w$ are obtained by ridge regression on the observed discount factors:
+
+$$
+\hat{w} = \arg\min_w \;\| \Phi w - d^{\mathrm{obs}} \|_2^2 + \alpha\|w\|_2^2.
+$$
+
+Because the feature map approximates a shift-invariant kernel, the resulting estimator is a smooth function of maturity that can interpolate the observed points while remaining regularised.  
+On a single clean cross-section this yields near-zero in-sample pricing error; in an expanding-window evaluation its average error becomes comparable to Nelson–Siegel.
+
+---
+
+### 4.3 Evaluation
+
+- **Cross-section metrics**: RMSE / MAE of fitted versus observed discount factors, plus a discrete smoothness penalty.
+- **Expanding-window / day-by-day backtest**: models are re-estimated on successive dates and the pricing error is averaged over time.
+
+All primary numbers reported in this repository are produced by the single command
+
+```bash
+py scripts/run_pipeline.py --source csv --data data/raw/us_treasury_yields_daily.csv --out reports
+```
+
 
 ## 5. Results (default synthetic run)
 
